@@ -27,7 +27,7 @@ while chunk := fin.read(1024*1024):
 fin.close()
 
 #read file
-qualCount_LIST  = [0]*93
+qualCount_LIST  = [0]*100
 readLength_LIST = []
 
 jobTimer.reset()
@@ -44,15 +44,15 @@ for lineIDX, line in enumerate(fin):
         read = line.rstrip('\n')
         readLength = len(read)
         readLength_LIST += [readLength]
-        pass
     elif lineIDX%4 == 2:
         pass
     elif lineIDX%4 == 3:
-        pass
-    else:
         qual_LIST = line.rstrip('\n')
         for qual in qual_LIST:
             qualCount_LIST[ord(qual) - 33] += 1
+    else:
+        print('bug')        
+
 
 jobTimer.check()
 percentage = 1.0
@@ -62,7 +62,7 @@ fin.close()
 #write qual
 fout = open(opt.INPUT + '.qual', 'w')
 for qualIDX, qualCount in enumerate(qualCount_LIST):
-    fout.write('\t'.join([qualIDX, qualCount]) + '\n')
+    fout.write('\t'.join(map(str,[qualIDX, qualCount])) + '\n')
 fout.close()
 
 

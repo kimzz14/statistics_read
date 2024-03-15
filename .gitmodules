@@ -1,0 +1,3 @@
+[submodule "lib/JobTimer"]
+	path = lib/JobTimer
+	url = https://github.com/kimzz14/JobTimer.git

@@ -1,5 +1,6 @@
+from lib.JobTimer.JobTimer import JobTimer
 from optparse import OptionParser
-import sys, gzip
+import sys, gzip, pragzip
 
 #option parser
 parser = OptionParser(usage="""Run annotation.py \n Usage: %prog [options]""")
@@ -12,14 +13,31 @@ if opt.INPUT == None:
     print('')
     sys.exit()
 
+infile = opt.INPUT
 
-fin = gzip.open(opt.INPUT, 'rt')
+jobTimer = JobTimer()
 
-qualCount_LIST = [0]*93
 
+#count line from gzip
+lineN = 0
+
+fin = pragzip.open(infile)
+while chunk := fin.read(1024*1024):
+    lineN += chunk.count(b'\n')
+fin.close()
+
+#read file
+qualCount_LIST  = [0]*93
 readLength_LIST = []
 
+jobTimer.reset()
+fin = gzip.open(infile, 'rt')
 for lineIDX, line in enumerate(fin):
+    if (lineIDX)%int(lineN / 20) == 0:
+        jobTimer.check()
+        percentage = float(lineIDX+1)/lineN
+        print("Read File... [{0:6.2f}%] remainTime: {1}".format(percentage*100, jobTimer.remainTime(percentage)))
+
     if lineIDX%4 == 0:
         pass
     elif lineIDX%4 == 1:
@@ -36,15 +54,19 @@ for lineIDX, line in enumerate(fin):
         for qual in qual_LIST:
             qualCount_LIST[ord(qual) - 33] += 1
 
+jobTimer.check()
+percentage = 1.0
+print("Read File... [{0:6.2f}%] remainTime: {1}".format(percentage*100, jobTimer.remainTime(percentage)))
+fin.close()
 
+#write qual
 fout = open(opt.INPUT + '.qual', 'w')
-
 for qualIDX, qualCount in enumerate(qualCount_LIST):
     fout.write('\t'.join([qualIDX, qualCount]) + '\n')
 fout.close()
 
 
-
+#
 readLength_LIST = sorted(readLength_LIST, reverse=True)
 
 readN = len(readLength_LIST)

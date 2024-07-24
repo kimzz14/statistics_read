@@ -43,6 +43,7 @@ for lineIDX, line in enumerate(fin):
         jobTimer.check()
         percentage = float(lineIDX+1)/lineN
         print("Read File... [{0:6.2f}%] remainTime: {1}".format(percentage*100, jobTimer.remainTime(percentage)))
+        sys.stdout.flush()
 
     if lineIDX%4 == 0:
         readID = line
@@ -67,5 +68,6 @@ for lineIDX, line in enumerate(fin):
 jobTimer.check()
 percentage = 1.0
 print("Read File... [{0:6.2f}%] remainTime: {1}".format(percentage*100, jobTimer.remainTime(percentage)))
+sys.stdout.flush()
 fin.close()
 fout.close()

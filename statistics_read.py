@@ -33,10 +33,11 @@ readLength_LIST = []
 jobTimer.reset()
 fin = gzip.open(infile, 'rt')
 for lineIDX, line in enumerate(fin):
-    if (lineIDX)%int(lineN / 20) == 0:
+    if (lineIDX)%int(lineN / 20) == int(lineN / 20) - 1:
         jobTimer.check()
         percentage = float(lineIDX+1)/lineN
         print("Read File... [{0:6.2f}%] remainTime: {1}".format(percentage*100, jobTimer.remainTime(percentage)))
+        sys.stdout.flush()
 
     if lineIDX%4 == 0:
         pass
@@ -47,9 +48,10 @@ for lineIDX, line in enumerate(fin):
     elif lineIDX%4 == 2:
         pass
     elif lineIDX%4 == 3:
-        qual_LIST = line.rstrip('\n')
-        for qual in qual_LIST:
-            qualCount_LIST[ord(qual) - 33] += 1
+        pass
+        #qual_LIST = line.rstrip('\n')
+        #for qual in qual_LIST:
+        #    qualCount_LIST[ord(qual) - 33] += 1
     else:
         print('bug')        
 
@@ -57,13 +59,14 @@ for lineIDX, line in enumerate(fin):
 jobTimer.check()
 percentage = 1.0
 print("Read File... [{0:6.2f}%] remainTime: {1}".format(percentage*100, jobTimer.remainTime(percentage)))
+sys.stdout.flush()
 fin.close()
 
 #write qual
-fout = open(opt.INPUT + '.qual', 'w')
-for qualIDX, qualCount in enumerate(qualCount_LIST):
-    fout.write('\t'.join(map(str,[qualIDX, qualCount])) + '\n')
-fout.close()
+#fout = open(opt.INPUT + '.qual', 'w')
+#for qualIDX, qualCount in enumerate(qualCount_LIST):
+#    fout.write('\t'.join(map(str,[qualIDX, qualCount])) + '\n')
+#fout.close()
 
 
 #

@@ -1,27 +1,42 @@
-###############################################################################
-import time, math
-class JobTimer:
-    def __init__(self):
-        self.tic = None
+#####################################################################################
+class Statistics_Length:
+    def __init__(self, length_LIST):
+        self.length_LIST = length_LIST
 
-    def reset(self):
-        self.tic = time.time()
+        self.sortedLength_LIST = sorted(self.length_LIST, reverse=True)
+        self.totalLength = sum(self.sortedLength_LIST)
 
-    def check(self):
-        self.toc = time.time()
+        self.maxLength = self.sortedLength_LIST[0]
+        self.minLength = self.sortedLength_LIST[-1]
 
-    def remainTime(self, percentage):
-        remainTime = (self.toc - self.tic)/percentage*(1.0-percentage)
+    def get_total(self):
+        return self.totalLength
+    
+    def get_lengthN(self):
+        return len(self.sortedLength_LIST)
 
-        day = math.floor(remainTime/60/60/24)
-        hour = math.floor((remainTime - day*60*60*24)/60/60)
-        minute = math.floor((remainTime - day*60*60*24 - hour*60*60)/60)
-        second = math.floor((remainTime - day*60*60*24 - hour*60*60 - minute*60))
+    def get_max(self):
+        return self.maxLength
+    
+    def get_min(self):
+        return self.minLength
 
-        timeText = str(day).rjust(3, ' ') + ' days, ' + str(hour).rjust(2,'0') + ':' + str(minute).rjust(2,'0') + ':' + str(second).rjust(2,'0')
+    def get_N(self, N):
+        sumLength = 0
+        for idx, length in enumerate(self.sortedLength_LIST):
+            sumLength += length
+            if float(sumLength) / self.totalLength >= (float(N)/100):
+                return length, idx+1
 
-        return timeText
-###############################################################################
+    def get_count(self, func):
+        count_LIST = [0]*(int(func(self.maxLength)) + 1)
+        sum_LIST   = [0]*(int(func(self.maxLength)) + 1)
+        for length in self.sortedLength_LIST:
+            countIDX = int(func(length))
+            count_LIST[countIDX] += 1
+            sum_LIST[countIDX]   += length
+        return count_LIST, sum_LIST
+#####################################################################################
 from optparse import OptionParser
 import sys, gzip
 #option parser
@@ -37,111 +52,46 @@ if opt.INPUT == None:
 
 infile = opt.INPUT
 
-jobTimer = JobTimer()
-
-
-#count line from gzip
-lineN = 0
-fin = gzip.open(infile, 'rt')
-for line in fin:
-    lineN += 1
-fin.close()
-
 #read file
-qualCount_LIST  = [0]*100
-readLength_LIST = []
+length_LIST = []
 
-jobTimer.reset()
 fin = gzip.open(infile, 'rt')
 for lineIDX, line in enumerate(fin):
-    if (lineIDX)%int(lineN / 20) == int(lineN / 20) - 1:
-        jobTimer.check()
-        percentage = float(lineIDX+1)/lineN
-        print("Read File... [{0:6.2f}%] remainTime: {1}".format(percentage*100, jobTimer.remainTime(percentage)))
-        sys.stdout.flush()
-
-    if lineIDX%4 == 0:
-        pass
-    elif lineIDX%4 == 1:
-        read = line.rstrip('\n')
-        readLength = len(read)
-        readLength_LIST += [readLength]
-    elif lineIDX%4 == 2:
-        pass
-    elif lineIDX%4 == 3:
-        pass
-        #qual_LIST = line.rstrip('\n')
-        #for qual in qual_LIST:
-        #    qualCount_LIST[ord(qual) - 33] += 1
-    else:
-        print('bug')        
-
-
-jobTimer.check()
-percentage = 1.0
-print("Read File... [{0:6.2f}%] remainTime: {1}".format(percentage*100, jobTimer.remainTime(percentage)))
-sys.stdout.flush()
+    if lineIDX%4 == 1:
+        sequence = line.rstrip('\n')
+        length_LIST += [len(sequence)]
 fin.close()
 
-#write qual
-#fout = open(opt.INPUT + '.qual', 'w')
-#for qualIDX, qualCount in enumerate(qualCount_LIST):
-#    fout.write('\t'.join(map(str,[qualIDX, qualCount])) + '\n')
-#fout.close()
+#Statistics_Length
+statistics_Length = Statistics_Length(length_LIST)
 
-
-#
-readLength_LIST = sorted(readLength_LIST, reverse=True)
-
-readN = len(readLength_LIST)
-
-totalReadLength = sum(readLength_LIST)
-sumReadLength = 0
-
-maxReadLength = max(readLength_LIST)
-minReadLength = min(readLength_LIST)
-
-for readLength in readLength_LIST:
-    sumReadLength += readLength
-    if float(sumReadLength) / totalReadLength > 0.5:
-        N50 = readLength
-        break
-
-print('Number of reads:'  + '\t' + str(readN))
-print('Total bases:'  + '\t' + str(totalReadLength))
-print('Read length N50:'  + '\t' + str(N50))
-print('Min read length:'  + '\t' + str(minReadLength))
-print('Max read length:'  + '\t' + str(maxReadLength))
-
-
-fout = open(opt.INPUT + '.logCount', 'w')
-
-import math
-
-logCount_LIST = [0]*(int(math.log2(maxReadLength)) + 1)
-logSum_LIST = [0]*(int(math.log2(maxReadLength)) + 1)
-
-for readLength in readLength_LIST:
-    logCountIDX = int(math.log2(readLength))
-    logCount_LIST[logCountIDX] += 1
-    logSum_LIST[logCountIDX] += readLength
-
-for logCountIDX, (logCount, logSum) in enumerate(zip(logCount_LIST, logSum_LIST)):
-    fout.write('\t'.join(map(str,[logCountIDX, logCount, logSum])) + '\n')
-
+#log
+fout = open(opt.INPUT + '.log', 'w')
+fout.write('Number of sequences:'  + '\t' + str(statistics_Length.get_lengthN()) + '\n')
+fout.write('Total bases:'  + '\t' + str(statistics_Length.get_total()) + '\n')
+fout.write('N50(L50):'  + '\t' + '\t'.join(map(str,(statistics_Length.get_N(50)))) + '\n')
+fout.write('N90(L90):'  + '\t' + '\t'.join(map(str,(statistics_Length.get_N(90)))) + '\n')
+fout.write('Min length:'  + '\t' + str(statistics_Length.get_min()) + '\n')
+fout.write('Max length:'  + '\t' + str(statistics_Length.get_max()) + '\n')
 fout.close()
 
-fout = open(opt.INPUT + '.count', 'w')
+#N1 ~ N100, L1 ~ N100
+fout = open(infile + '.' + 'NL', 'w')
+for N in range(1, 101):
+    fout.write('N' + str(N) + '(L' + str(N) + ')' + '\t' + '\t'.join(map(str,(statistics_Length.get_N(N)))) + '\n')
+fout.close()
 
-count_LIST = [0]*(int((maxReadLength)/1000) + 1)
-sum_LIST   = [0]*(int((maxReadLength)/1000) + 1)
-
-for readLength in readLength_LIST:
-    countIDX = int((readLength)/1000)
-    count_LIST[countIDX] += 1
-    sum_LIST[countIDX] += readLength
-
+#1kb count
+fout = open(opt.INPUT + '.count.1kb', 'w')
+count_LIST, sum_LIST = statistics_Length.get_count(lambda x: x/1000)
 for countIDX, (count, sum) in enumerate(zip(count_LIST, sum_LIST)):
     fout.write('\t'.join(map(str,[countIDX, count, sum])) + '\n')
+fout.close()
 
+import math
+#log count
+fout = open(opt.INPUT + '.count.log2', 'w')
+count_LIST, sum_LIST = statistics_Length.get_count(lambda x: math.log2(x))
+for countIDX, (count, sum) in enumerate(zip(count_LIST, sum_LIST)):
+    fout.write('\t'.join(map(str,[countIDX, count, sum])) + '\n')
 fout.close()

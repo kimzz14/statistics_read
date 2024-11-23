@@ -51,7 +51,7 @@ random_LIST = random_LIST * 4
 
 def run_single(infile, outfile):
     fin = gzip.open(infile, 'rt')
-    fout = gzip.open(outfile, 'wt')
+    fout = gzip.open(outfile, 'wt', compresslevel=6)
     lineN = 0
     writeN = 0
     randomIDX = 0

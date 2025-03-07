@@ -116,13 +116,6 @@ for idx in range(33, 133):
     fout.write(str(idx - 33) + '\t' + str(qualityCount_LIST[idx]) + '\n')
 fout.close()
 
-#qualityMean
-fout = open(fileName + '.qualityMean', 'w')
-for idx in range(33, 133):
-    fout.write(str(idx - 33) + '\t' + str(qualityCount_LIST[idx]) + '\n')
-fout.close()
-
-
 #log
 fout = open(fileName + '.log', 'w')
 fout.write(f'Number of sequences:'  + '\t' + str(sequenceN) + '\n')

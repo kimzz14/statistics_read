@@ -21,19 +21,25 @@ batchN = 256
 batchIDX_LIST = range(0, batchN)
 fileName = opt.INPUT
 
+
 #######################################################################################################
 def batch_runner(func_name):
     result_LIST = None
+    qualityCount_LIST = [0] * 200
     with Pool(processes=threadN) as pool:
         result_LIST = pool.map(func_name, batchIDX_LIST)
 
     data_LIST = []
-    for result in result_LIST:
-        data_LIST += result
+    for _data_LIST, _qualityCount_LIST in result_LIST:
+
+        for idx, qualityCount in enumerate(_qualityCount_LIST):
+            qualityCount_LIST[idx] += qualityCount
+
+        data_LIST += _data_LIST
 
     data_LIST = np.array(data_LIST)
-
-    return data_LIST
+    qualityCount_LIST = np.array(qualityCount_LIST)
+    return data_LIST, qualityCount_LIST
 
 #######################################################################################################
 def read_fastq(batchIDX):
@@ -43,6 +49,7 @@ def read_fastq(batchIDX):
         fin = open(fileName, 'rt')
 
     data_LIST = []
+    qualityCount_LIST = [0] * 200
     for lineIDX, line in enumerate(fin):
         if (lineIDX>>2)%batchN != batchIDX: continue
 
@@ -52,19 +59,24 @@ def read_fastq(batchIDX):
             continue
 
         if lineIDX%4 == 3:
-            quality = line.rstrip('\n')
-            quality = list(map(ord, quality))
-            qualityMean = int(sum(quality) / len(quality)) - 33
+            quality_LIST = line.rstrip('\n')
+            quality_LIST = list(map(ord, quality_LIST))
+
+            for quality in quality_LIST:
+                qualityCount_LIST[quality] += 1
+            if len(quality_LIST) == 0:
+                qualityMean = 0
+            else:
+                qualityMean = int(sum(quality_LIST) / len(quality_LIST)) - 33
             data_LIST += [[sequenceLen, qualityMean]]
             continue
     fin.close()
-
-    return data_LIST
+    return data_LIST, qualityCount_LIST
 
 
 
 #######################################################################################################
-dataSet_LIST = batch_runner(read_fastq)
+dataSet_LIST, qualityCount_LIST = batch_runner(read_fastq)
 sequenceLen_LIST = dataSet_LIST[:, 0]
 qualityMean_LIST = dataSet_LIST[:, 1]
 
@@ -73,6 +85,10 @@ sequenceN = dataSet_LIST.shape[0]
 meanLength = sequenceLen_LIST.mean()
 minLength = sequenceLen_LIST.min()
 maxLength = sequenceLen_LIST.max()
+
+meanQuality = qualityMean_LIST.mean()
+minQuality = qualityMean_LIST.min()
+maxQuality = qualityMean_LIST.max()
 
 #
 totalLength_Q00 = sequenceLen_LIST.sum()
@@ -94,7 +110,18 @@ for idx, length in enumerate(sequenceLen_LIST[::-1]):
         N_LIST += [(length, idx + 1)]
         N += 1
 
-#
+#qualityCount
+fout = open(fileName + '.qualityCount', 'w')
+for idx in range(33, 133):
+    fout.write(str(idx - 33) + '\t' + str(qualityCount_LIST[idx]) + '\n')
+fout.close()
+
+#qualityMean
+fout = open(fileName + '.qualityMean', 'w')
+for idx in range(33, 133):
+    fout.write(str(idx - 33) + '\t' + str(qualityCount_LIST[idx]) + '\n')
+fout.close()
+
 
 #log
 fout = open(fileName + '.log', 'w')
@@ -110,6 +137,9 @@ fout.write(f'N90(L90):\t{N_LIST[90][0]}({N_LIST[90][1]})\n')
 fout.write(f'mean length:\t{meanLength:0.4f}\n')
 fout.write(f'Min length:\t{minLength}\n')
 fout.write(f'Max length:\t{maxLength}\n')
+fout.write(f'mean quality:\t{meanQuality:0.4f}\n')
+fout.write(f'min quality:\t{minQuality:0.4f}\n')
+fout.write(f'max quality:\t{maxQuality:0.4f}\n')
 fout.close()
 
 
